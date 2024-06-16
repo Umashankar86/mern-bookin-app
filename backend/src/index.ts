@@ -9,6 +9,7 @@ import verifyToken from './middleware/auth';
 import path from 'path';
 import { v2 as cloudinary } from 'cloudinary';
 import myHotelRoutes from './routes/my-hotels';
+import hotelRoutes from "./routes/hotels";
 
 // Ensure your environment variables are set correctly
 cloudinary.config({
@@ -33,6 +34,13 @@ app.use(cors({
   credentials: true,
 }));
 
+// Global logging middleware
+app.use((req: Request, res: Response, next) => {
+  console.log(`Incoming request: ${req.method} ${req.url}`);
+  console.log(`Query params: ${JSON.stringify(req.query)}`);
+  next();
+});
+
 // Static files
 app.use(express.static(path.join(__dirname, "../../frontend/dist")));
 
@@ -40,10 +48,10 @@ app.use(express.static(path.join(__dirname, "../../frontend/dist")));
 app.use("/api/auth", AuthRoutes);
 app.use("/api/user", UserRoute);
 app.use("/api/my-hotels", myHotelRoutes);
-
-app.get("*",(req:Request, res:Response)=>{
-  res.sendFile(path.join(__dirname, "../../frontend/dist/index.html"))
-})
+app.use("/api/hotels", hotelRoutes);
+app.get("*", (req: Request, res: Response) => {
+  res.sendFile(path.join(__dirname, "../../frontend/dist/index.html"));
+});
 
 app.listen(9000, () => {
   console.log("Server is running on port 9000");

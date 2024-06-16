@@ -18,8 +18,7 @@ const verifyToken = (req: Request, res: Response, next: NextFunction) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY as string) as JwtPayload;
-    req.userId=(decoded as JwtPayload).userId;
-    ; // TypeScript should now recognize userId
+    req.userId = decoded.userId; // TypeScript should now recognize userId
     next();
   } catch (error) {
     return res.status(401).json({ message: "Unauthorized: Invalid token" });

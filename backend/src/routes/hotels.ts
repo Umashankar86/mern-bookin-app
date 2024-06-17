@@ -1,8 +1,81 @@
 import express, { Request, Response } from "express";
 import Hotel from "../models/hotel";
 import { HotelSearchResponse } from "../shared/types";
+import { param, validationResult } from "express-validator";
 
 const router = express.Router();
+
+
+
+
+
+
+router.get("/search", async (req: Request, res: Response) => {
+  try {
+    const pageSize = 5;
+    const pageNumber = parseInt(req.query.page ? req.query.page.toString() : "1", 10);
+    const skip = (pageNumber - 1) * pageSize;
+
+    const query = constructSearchQuery(req.query);
+
+let sortOptions={};
+switch(req.query.sortOption){
+  case "starRating":
+    sortOptions={starRating: -1};
+    break;
+  case "pricePerNightASC":
+      sortOptions={pricePerNight:1};
+      break;
+  case "pricePerNightDesc":
+      sortOptions={pricePerNight:-1};
+      break;
+}
+
+
+
+    console.log("MongoDB Query:", JSON.stringify(query, null, 2)); // Log the query passed to MongoDB
+
+    const hotels = await Hotel.find(query).sort(sortOptions).skip(skip).limit(pageSize);
+    const total = await Hotel.countDocuments(query);
+
+    const response: HotelSearchResponse = {
+      data: hotels,
+      pagination: {
+        total,
+        page: pageNumber,
+        pages: Math.ceil(total / pageSize),
+      },
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching hotels:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+router.get(
+  "/:id",
+  [param("id").notEmpty().withMessage("Hotel ID is required")],
+  async (req: Request, res: Response) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const id = req.params.id.toString();
+
+    try {
+      const hotel = await Hotel.findById(id);
+      res.json(hotel);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Error fetching hotel" });
+    }
+  }
+);
+
+
 
 const constructSearchQuery = (queryParams: any) => {
   let constructedQuery: any = {};
@@ -74,48 +147,5 @@ const constructSearchQuery = (queryParams: any) => {
   return constructedQuery;
 };
 
-router.get("/search", async (req: Request, res: Response) => {
-  try {
-    const pageSize = 5;
-    const pageNumber = parseInt(req.query.page ? req.query.page.toString() : "1", 10);
-    const skip = (pageNumber - 1) * pageSize;
-
-    const query = constructSearchQuery(req.query);
-
-let sortOptions={};
-switch(req.query.sortOption){
-  case "starRating":
-    sortOptions={starRating: -1};
-    break;
-  case "pricePerNightASC":
-      sortOptions={pricePerNight:1};
-      break;
-  case "pricePerNightDesc":
-      sortOptions={pricePerNight:-1};
-      break;
-}
-
-
-
-    console.log("MongoDB Query:", JSON.stringify(query, null, 2)); // Log the query passed to MongoDB
-
-    const hotels = await Hotel.find(query).sort(sortOptions).skip(skip).limit(pageSize);
-    const total = await Hotel.countDocuments(query);
-
-    const response: HotelSearchResponse = {
-      data: hotels,
-      pagination: {
-        total,
-        page: pageNumber,
-        pages: Math.ceil(total / pageSize),
-      },
-    };
-
-    res.json(response);
-  } catch (error) {
-    console.error("Error fetching hotels:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
 
 export default router;
